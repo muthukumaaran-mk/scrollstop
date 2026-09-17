@@ -551,12 +551,16 @@ select.input {
   top: 0;
   right: 0;
   height: 100vh;
+  height: 100dvh; /* mobile: accounts for the browser's address bar, so
+                     Log out never ends up below the visible fold */
   width: 300px;
   background: var(--panel);
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 2rem 1.5rem;
+  overflow-y: auto; /* safety net: if content ever exceeds the height,
+                       the whole drawer scrolls instead of hiding buttons */
   transform: translateX(100%);
   transition: transform 0.35s var(--ease);
   z-index: 95;
@@ -654,6 +658,7 @@ select.input {
 }
 
 .sidebar__logout {
+  flex-shrink: 0;
   margin-top: 1.5rem;
   width: 100%;
   height: 44px;
@@ -686,6 +691,14 @@ select.input {
     gap: 1.75rem;
   }
 
+  /* On tall phone screens, centering vertically left a huge empty gap
+     under the avatar before "ScrollStop" even appeared. Start near the
+     top instead. */
+  .layout--centered {
+    justify-content: flex-start;
+    padding-top: 0.5rem;
+  }
+
   .panel--form,
   .panel--form-compact {
     max-width: 100%;
@@ -698,13 +711,17 @@ select.input {
   }
 
   .topbar {
-    padding: 1.25rem 1.25rem 0;
+    padding: 1.25rem 1.5rem 0;
   }
 }
 
 @media (max-width: 480px) {
   .sidebar {
     width: 100%;
+  }
+
+  .topbar {
+    padding-right: 1.75rem;
   }
 }
 

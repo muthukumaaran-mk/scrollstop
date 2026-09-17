@@ -20,7 +20,7 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
-    model_config = ConfigDict(from_attribute=True)
+    model_config = ConfigDict(from_attributes=True)
 
 class HistoryCreate(BaseModel):
     description : str

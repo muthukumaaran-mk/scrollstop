@@ -28,10 +28,6 @@ const HISTORY_URL = `${BASE_URL}/history`;
 
 const EMPTY_ERRORS = { description: "", platform: "", tone: "", language: "" };
 
-// The backend sometimes returns hooks as a real array (from /generate) and
-// sometimes as one multiline string (as stored in history). Every place
-// hooks enters state goes through this first, so batch.hooks.map(...) can
-// always assume a string[].
 const toHooksArray = (hooks) => {
   if (Array.isArray(hooks)) return hooks;
   if (typeof hooks === "string") {
@@ -43,53 +39,40 @@ const toHooksArray = (hooks) => {
   return [];
 };
 
-// Recency for a history row: prefer a real timestamp field if the backend
-// returns one, otherwise fall back to its position in the array (the
-// common default for an unordered "SELECT * FROM history" — earlier index
-// assumed to mean earlier insertion).
 const recencyOf = (item, index) => {
   const stamp = item.created_at ?? item.createdAt ?? item.timestamp;
   return stamp ? new Date(stamp).getTime() : index;
 };
 
 function App() {
-  // ---- generator form state ----
+ 
   const [description, setDescription] = useState("");
   const [platform, setPlatform] = useState("");
   const [tone, setTone] = useState("");
   const [language, setLanguage] = useState("");
   const [errors, setErrors] = useState(EMPTY_ERRORS);
 
-  // ---- results state ----
-  // Each generate appends a new batch instead of replacing the old one, so
-  // previous results stay on screen and the panel scrolls to fit them all.
+ 
   const [resultsBatches, setResultsBatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const nextBatchId = useRef(0);
   const resultsRef = useRef(null);
 
-  // ---- layout state ----
+
   const [hasGeneratedOnce, setHasGeneratedOnce] = useState(false);
   const [hasFreshResults, setHasFreshResults] = useState(false);
 
   const previousHooksRef = useRef(null);
 
-  // ---- auth state ----
+
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState(null); // null | "login" | "signup"
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // ---- history state ----
-  // Raw rows exactly as the backend returns them — one row per generate,
-  // possibly several rows sharing the same description (one per "Generate
-  // Again" click). The sidebar only ever shows a deduped view of this, but
-  // clicking an item needs every row for that description, so we keep the
-  // full list here rather than only the deduped one.
+
   const [history, setHistory] = useState([]);
 
-  // Fetch history from the backend. Called after we confirm who the user
-  // is (mount-with-token, or right after login/signup) and again after
-  // every successful save, so the sidebar never needs a manual refresh.
+
   const getHistory = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     if (!token) return;
@@ -123,15 +106,13 @@ function App() {
     await getMe();
   };
 
-  // Runs once on mount only — getMe() itself (called here, and again after
-  // login/signup) is what keeps the user + history in sync, so there is no
-  // separate history-fetch effect duplicating this call.
+  
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (token) {
       getMe().catch(() => localStorage.removeItem("access_token"));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
   const logout = () => {
@@ -153,7 +134,7 @@ function App() {
     handleAuthSuccess();
   };
 
-  // ---- generator logic ----
+ 
   const validate = () => {
     const next = {
       description: description.trim() ? "" : "Description is required.",
@@ -197,8 +178,7 @@ function App() {
           { description, platform, tone, language, hooks },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        // Real-time sync: refresh the sidebar immediately after saving,
-        // no page reload needed.
+        
         await getHistory();
       }
 
@@ -208,8 +188,7 @@ function App() {
       ]);
       setHasGeneratedOnce(true);
       setHasFreshResults(true);
-      // Wait a tick so the new batch's DOM has been added before measuring
-      // scrollHeight, then scroll down to reveal it.
+  
       window.requestAnimationFrame(() => {
         resultsRef.current?.scrollIntoView({
           behavior: "smooth",
@@ -228,10 +207,7 @@ function App() {
     requestHooks();
   };
 
-  // Restoring a history entry means: find every raw row that shares this
-  // description, turn each one into its own batch (oldest first, so the
-  // panel reads exactly like the person had clicked "Generate Again" that
-  // many times), and restore the form fields from the newest matching row.
+ 
   const handleSelectHistory = (description) => {
     const matches = history
       .map((row, index) => ({ ...row, _recency: recencyOf(row, index) }))
@@ -259,10 +235,7 @@ function App() {
     setSidebarOpen(false);
   };
 
-  // Sidebar display only: one row per unique description, showing whichever
-  // occurrence is most recent. The click handler above re-derives the full
-  // set of matching rows from raw `history` — this deduped list is never
-  // used for restoring batches, only for what the sidebar lists.
+
   const dedupedHistory = useMemo(() => {
     const latestByDescription = new Map();
     history.forEach((item, index) => {
@@ -282,9 +255,6 @@ function App() {
   const isSplit = hasGeneratedOnce;
   const isSingleBatch = resultsBatches.length <= 1;
 
-  // Continuous "01, 02, ..." numbering across every batch, while each
-  // batch's own items still stagger in from 0ms — since already-mounted
-  // <p> elements keep their key, their fade-in animation never replays.
   let runningIndex = 0;
   const renderedBatches = resultsBatches.map((batch) => ({
     id: batch.id,
