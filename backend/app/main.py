@@ -33,7 +33,8 @@ def generate(request: HookRequest):
         request.description,
         request.platform, 
         request.tone, 
-        request.language
+        request.language,
+        request.previous_hooks
         )
     return {
         "hooks": hook
